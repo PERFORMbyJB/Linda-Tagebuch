@@ -169,7 +169,7 @@ nav button.on{color:var(--pink)}
 {
 /* ---------- Grundlagen ---------- */
 const KEY = 'lipoTagebuch.v1';
-const VERS = ['Leggings/Hose','Strumpfhose','Caprihose','Oberschenkelstrümpfe','Kniestrümpfe','Armstrümpfe','Bolero/Oberteil'];
+const VERS = ['Leggings flachgestrickt','Caprihose','Strumpfhose','Oberschenkelstrümpfe','Armstrümpfe','Bolero/Oberteil'];
 const REG = ['Oberschenkel','Unterschenkel','Knie','Hüfte/Gesäß','Oberarme','Unterarme'];
 const SYM = ['Druckschmerz','Spannungsgefühl','Schweregefühl','Schwellung','Blaue Flecken','Berührungsempfindlich','Müde Beine'];
 const SPORT = ['Krafttraining','Radfahren','Schwimmen','Aquafitness','Walking','Yoga/Pilates','Sonstiges'];
@@ -197,13 +197,14 @@ const pct = (a,b) => b ? Math.round(a/b*100) + ' %' : '–';
 const range = (from,to) => { const r=[]; if (!from || !to || from > to) return r; let k=from; while (k <= to) { r.push(k); k = addDays(k,1); } return r; };
 const isStandalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 
-const blank = () => ({version:1, profile:{name:'',arzt:'',diagnose:'',start:'',ziel:10,groesse:null}, days:{}, mess:[], lastBackup:null, hideInstall:false});
+const blank = () => ({version:1, profile:{name:'',arzt:'',diagnose:'',start:'',ziel:10,groesse:null,befund:{}}, days:{}, mess:[], lastBackup:null, hideInstall:false});
 const newDay = () => ({komp:null,kompStd:0,vers:[],schmerz:null,reg:[],sym:[],sport:null,sportArt:[],sportMin:0,ern:null,ernTags:[],wasser:null,gewicht:null,notiz:''});
 
 function normalize(o){
   const b = blank();
   const r = Object.assign(b, o || {});
   r.profile = Object.assign(blank().profile, (o && o.profile) || {});
+  if (!r.profile.befund || typeof r.profile.befund !== 'object') r.profile.befund = {};
   r.days = (o && typeof o.days === 'object' && o.days) ? o.days : {};
   r.mess = Array.isArray(o && o.mess) ? o.mess : [];
   return r;
@@ -351,6 +352,21 @@ function polySegments(vals, maxY){ // vals: array (null erlaubt) → SVG-Polylin
     `<polyline points="${s.join(' ')}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`).join('');
 }
 
+/* ---------- Ausgangslage vs. jetzt ---------- */
+function baselineCard(){
+  const B = S.profile.befund || {};
+  if (B.gewicht == null && !B.schmerz && B.taille == null) return '';
+  const ks = docKeys(), lastW = ks.filter(k => S.days[k].gewicht != null).pop();
+  const last30 = stats(addDays(todayISO(), -29), todayISO());
+  const tMess = [...S.mess].sort((a,b) => a.date < b.date ? -1 : 1).filter(m => mVal(m,'taille') != null).pop();
+  const row = (l, a, b) => `<tr><td>${l}</td><td>${a}</td><td>${b}</td></tr>`;
+  return `<div class="card"><h2>Ausgangslage → heute</h2><div class="scroll"><table><thead><tr><th></th><th>Befund${B.datum ? ' ' + fmtShort(B.datum) : ''}</th><th>Aktuell</th></tr></thead><tbody>
+    ${B.schmerz ? row('Schmerz (0–10)', esc(B.schmerz), last30.avgPain == null ? '–' : 'Ø ' + de(last30.avgPain) + ' (30 T.)') : ''}
+    ${B.gewicht != null ? row('Gewicht', de(B.gewicht) + ' kg', lastW ? de(S.days[lastW].gewicht) + ' kg' : '–') : ''}
+    ${B.taille != null ? row('Taille', de(B.taille) + ' cm', tMess ? de(mVal(tMess,'taille')) + ' cm' : '–') : ''}
+  </tbody></table></div></div>`;
+}
+
 /* ---------- Ansicht: Verlauf ---------- */
 function vVerlauf(){
   const to = todayISO();
@@ -369,6 +385,7 @@ function vVerlauf(){
     <div class="prog"><i style="width:${pi.p}%"></i></div>
     <p class="small">Tag ${pi.n} seit ${fmtShort(startDate())} · ${pi.rest ? `noch ca. ${pi.rest} Tage` : '6 Monate erreicht'} · ${pi.docN} Tage dokumentiert</p>
   </div>
+  ${baselineCard()}
   <div class="per" role="group" aria-label="Zeitraum">${[[7,'7 Tage'],[30,'30 Tage'],[90,'90 Tage'],['all','Alles']].map(([v,l]) => `<button class="opt ${per===v?'on':''}" data-act="per" data-v="${v}">${l}</button>`).join('')}</div>
   <div class="card">
     <div class="stats">
@@ -439,7 +456,7 @@ function vUmfaenge(){
 
 /* ---------- Ansicht: Export ---------- */
 function vExport(){
-  const p = S.profile;
+  const p = S.profile, B = p.befund || {};
   const lb = S.lastBackup ? `${fmtShort(S.lastBackup.slice(0,10))}` : 'noch nie';
   return `
   <div class="top"><span class="brand">Export & Einstellungen</span></div>
@@ -469,6 +486,22 @@ function vExport(){
       <div><label class="lab" for="p_ziel">Ziel Kompression</label><div class="unitin"><input id="p_ziel" type="text" inputmode="decimal" data-in="ziel" data-scope="p" data-num="1" value="${esc(de(p.ziel))}"><span>Std.</span></div></div>
       <div><label class="lab" for="p_gr">Körpergröße</label><div class="unitin"><input id="p_gr" type="text" inputmode="numeric" data-in="groesse" data-scope="p" data-num="1" value="${p.groesse==null?'':esc(de(p.groesse))}"><span>cm</span></div></div>
     </div>
+  </div>
+  <div class="card"><h2>Ausgangsbefund</h2>
+    <p class="hint">Werte aus dem Arztbrief – Ausgangslage für den Vergleich nach 6 Monaten</p>
+    <div class="row2">
+      <div><label class="lab" for="b_datum">Befund vom</label><input id="b_datum" type="date" data-in="datum" data-scope="b" value="${esc(B.datum||'')}"></div>
+      <div><label class="lab" for="b_schmerz">Schmerz (0–10)</label><input id="b_schmerz" type="text" data-in="schmerz" data-scope="b" value="${esc(B.schmerz||'')}" placeholder="z. B. 6–7"></div>
+    </div>
+    <label class="lab" for="b_diag">Diagnose</label><input id="b_diag" type="text" data-in="diagnose" data-scope="b" value="${esc(B.diagnose||'')}" placeholder="z. B. Lipödem Stadium I">
+    <label class="lab" for="b_eint">Einrichtung</label><input id="b_eint" type="text" data-in="einrichtung" data-scope="b" value="${esc(B.einrichtung||'')}">
+    <div class="row2">
+      <div><label class="lab" for="b_gw">Gewicht</label><div class="unitin"><input id="b_gw" type="text" inputmode="decimal" data-in="gewicht" data-scope="b" data-num="1" value="${B.gewicht==null?'':esc(de(B.gewicht))}"><span>kg</span></div></div>
+      <div><label class="lab" for="b_ta">Taille</label><div class="unitin"><input id="b_ta" type="text" inputmode="decimal" data-in="taille" data-scope="b" data-num="1" value="${B.taille==null?'':esc(de(B.taille))}"><span>cm</span></div></div>
+    </div>
+    <label class="lab" for="b_bef">Klinischer Befund</label><textarea id="b_bef" data-in="befund" data-scope="b">${esc(B.befund||'')}</textarea>
+    <label class="lab" for="b_th">Empfohlene Therapie</label><textarea id="b_th" data-in="therapie" data-scope="b">${esc(B.therapie||'')}</textarea>
+    <button class="btn ghost" data-act="restore">Ausgangsdaten-Datei laden</button>
   </div>
   <div class="card"><h2>Installation</h2>
     <p class="small">${isStandalone() ? 'Läuft als App vom Home-Bildschirm.' : 'In Safari: „Teilen“ → „Zum Home-Bildschirm“. Wichtig: Danach nur noch über das App-Symbol öffnen, denn Safari und App haben getrennte Speicher.'}</p>
@@ -512,6 +545,21 @@ function buildPdf(from, to){
     ['Beginn der Dokumentation', fmtShort(startDate())], ['Erstellt am', fmtShort(todayISO())]
   ], styles:{fontSize:10, cellPadding:1.3, textColor:INK}, columnStyles:{0:{fontStyle:'bold', cellWidth:62}}}));
   let y = doc.lastAutoTable.finalY + 8;
+  const B = p.befund || {}, gr = p.groesse ? p.groesse / 100 : null;
+  const brows = [
+    ['Befund vom', B.datum ? fmtShort(B.datum) + (B.einrichtung ? ', ' + pdfSafe(B.einrichtung) : '') : pdfSafe(B.einrichtung || '')],
+    ['Diagnose', pdfSafe(B.diagnose)],
+    ['Gewicht / BMI', B.gewicht != null ? `${de(B.gewicht)} kg` + (gr ? ` / BMI ${de(B.gewicht / (gr*gr))} kg/m²` : '') : ''],
+    ['Taille / WHtR', B.taille != null ? `${de(B.taille)} cm` + (p.groesse ? ` / WHtR ${de(B.taille / p.groesse, 2)}` : '') : ''],
+    ['Schmerz bei Befund (0–10)', pdfSafe(B.schmerz)],
+    ['Klinischer Befund', pdfSafe(B.befund)],
+    ['Empfohlene Therapie', pdfSafe(B.therapie)]
+  ].filter(r => r[1]);
+  if (brows.length) {
+    y = title('Ausgangsbefund', y);
+    doc.autoTable(Object.assign({}, tableBase, {startY: y + 1, body: brows, columnStyles:{0:{fontStyle:'bold', cellWidth:72}}}));
+    y = doc.lastAutoTable.finalY + 10;
+  }
 
   y = title('Zusammenfassung', y);
   doc.autoTable(Object.assign({}, tableBase, {startY: y + 1, body: [
@@ -668,6 +716,7 @@ document.addEventListener('input', e => {
   if (messForm) { const t = e.target; if (t.dataset && t.dataset.m) { messForm.values[t.dataset.m] = t.value; return; } if (t.id === 'mdate') { messForm.date = t.value; return; } if (t.id === 'mnote') { messForm.note = t.value; return; } }
   const el = e.target.closest('[data-in]'); if (!el) return;
   const k = el.dataset.in;
+  if (el.dataset.scope === 'b') { S.profile.befund[k] = el.dataset.num ? num(el.value) : el.value; save(); return; }
   if (el.dataset.scope === 'p') { S.profile[k] = el.dataset.num ? num(el.value) : el.value; if (k === 'ziel' && !(S.profile.ziel > 0)) S.profile.ziel = 10; save(); return; }
   const d = getDay(cur);
   d[k] = k === 'notiz' ? el.value : num(el.value);
@@ -679,6 +728,15 @@ $('#restoreFile').addEventListener('change', async e => {
   const f = e.target.files && e.target.files[0]; if (!f) return;
   try {
     const o = JSON.parse(await f.text());
+    if (o && o.typ === 'ausgangsdaten') {
+      if (await ask('Ausgangsdaten übernehmen?', 'Befund und Stammdaten werden ergänzt. Bestehende Tageseinträge bleiben erhalten.', 'Übernehmen')) {
+        const pr = o.profile || {};
+        Object.keys(pr).forEach(k => { if (k === 'befund') S.profile.befund = Object.assign({}, S.profile.befund, pr.befund); else if (pr[k] !== '' && pr[k] != null) S.profile[k] = pr[k]; });
+        (Array.isArray(o.mess) ? o.mess : []).forEach(m => { if (!S.mess.some(x => x.id === m.id)) S.mess.push(m); });
+        save(); render(); toast('Ausgangsdaten übernommen');
+      }
+      return;
+    }
     if (!o || typeof o.days !== 'object') throw new Error('Keine gültige Backup-Datei');
     const n = Object.keys(o.days).length, m = Array.isArray(o.mess) ? o.mess.length : 0;
     if (await ask('Backup laden?', `Die Datei enthält ${n} Tage und ${m} Messungen. Die aktuellen Daten auf diesem Gerät werden ersetzt.`, 'Ersetzen')) {
