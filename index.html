@@ -198,7 +198,7 @@ const range = (from,to) => { const r=[]; if (!from || !to || from > to) return r
 const isStandalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 
 const blank = () => ({version:1, profile:{name:'',arzt:'',diagnose:'',start:'',ziel:10,groesse:null,befund:{}}, days:{}, mess:[], lastBackup:null, hideInstall:false});
-const newDay = () => ({komp:null,kompStd:0,vers:[],schmerz:null,reg:[],sym:[],sport:null,sportArt:[],sportMin:0,ern:null,ernTags:[],wasser:null,gewicht:null,notiz:''});
+const newDay = () => ({komp:null,kompStd:0,vers:[],schmerz:null,reg:[],sym:[],sport:null,sportArt:[],sportMin:0,mld:null,ern:null,ernTags:[],wasser:null,gewicht:null,notiz:''});
 
 function normalize(o){
   const b = blank();
@@ -218,7 +218,7 @@ let tab = 'heute', cur = todayISO(), per = 30, messForm = null, pdfBlob = null, 
 
 const getDay = k => { const d = Object.assign(newDay(), S.days[k] || {}); ['vers','reg','sym','sportArt','ernTags'].forEach(f => { if (!Array.isArray(d[f])) d[f] = []; }); return d; };
 const putDay = (k,d) => { d.t = Date.now(); S.days[k] = d; save(); };
-const documented = d => !!d && (d.komp != null || d.schmerz != null || d.sport != null || d.ern != null || d.gewicht != null || d.wasser != null || ((d.notiz||'').trim() !== '') || (d.sym && d.sym.length > 0) || (d.ernTags && d.ernTags.length > 0) || (d.sportArt && d.sportArt.length > 0) || (d.vers && d.vers.length > 0) || (d.reg && d.reg.length > 0));
+const documented = d => !!d && (d.komp != null || d.schmerz != null || d.sport != null || d.mld != null || d.ern != null || d.gewicht != null || d.wasser != null || ((d.notiz||'').trim() !== '') || (d.sym && d.sym.length > 0) || (d.ernTags && d.ernTags.length > 0) || (d.sportArt && d.sportArt.length > 0) || (d.vers && d.vers.length > 0) || (d.reg && d.reg.length > 0));
 const docKeys = () => Object.keys(S.days).filter(k => documented(S.days[k])).sort();
 const firstDate = () => { const c = [...docKeys(), ...S.mess.map(m => m.date)].sort(); return c[0] || null; };
 const startDate = () => S.profile.start || firstDate() || todayISO();
@@ -304,6 +304,11 @@ function vHeute(){
     ${d.sport ? `<span class="lab">Was?</span>${chips('sportArt', SPORT, d.sportArt)}<span class="lab">Dauer</span>${stepper('sportMin', d.sportMin, 'Min.', 5, 0, 600, 'Dauer')}` : ''}
   </div>
 
+  <div class="card"><h2>Lymphdrainage</h2>
+    <p class="hint">Nur ausfüllen, wenn verordnet – manuelle Lymphdrainage (MLD) heute?</p>
+    ${seg('mld', d.mld, ['Ja, Termin', true], ['Nein', false])}
+  </div>
+
   <div class="card"><h2>Ernährung</h2>
     <p class="hint">Eigene Einschätzung des Tages</p>
     <div class="five">${ERN5.map((l,i) => `<button class="opt ${d.ern===i+1?'on':''}" data-act="set" data-k="ern" data-v="${i+1}" aria-pressed="${d.ern===i+1}">${l}</button>`).join('')}</div>
@@ -337,6 +342,7 @@ function stats(from, to){
     avgH: mean(kd.map(([,d]) => d.kompStd || 0)),
     avgPain: mean(pain), maxPain: pain.length ? Math.max(...pain) : null,
     sport: sp.length, sportMin: sum(sp.map(([,d]) => d.sportMin || 0)),
+    mld: list.filter(([,d]) => d.mld === true).length, mldUsed: list.some(([,d]) => d.mld != null),
     ern: mean(ern),
     w: list.filter(([,d]) => d.gewicht != null).map(([k,d]) => [k, d.gewicht])
   };
@@ -395,6 +401,7 @@ function vVerlauf(){
       <div class="stat"><b>${de(st.avgPain)}</b><span>Ø Schmerz (0–10)</span></div>
       <div class="stat"><b>${st.sport}×</b><span>Sport · ${st.sportMin} Min.</span></div>
       <div class="stat"><b>${de(st.ern)}</b><span>Ø Ernährung (1–5)</span></div>
+      ${st.mldUsed ? `<div class="stat"><b>${st.mld}×</b><span>Lymphdrainage</span></div>` : ''}
     </div>
   </div>
   <div class="card"><h2>Kompression & Schmerz</h2>
@@ -415,6 +422,7 @@ function vVerlauf(){
       parts.push(d.komp ? `${de(d.kompStd)} h Kompr.` : d.komp === false ? 'ohne Kompr.' : '');
       if (d.schmerz != null) parts.push(`Schmerz ${d.schmerz}`);
       if (d.sport) parts.push(`Sport ${d.sportMin} Min.`);
+      if (d.mld) parts.push('MLD');
       if (d.gewicht != null) parts.push(`${de(d.gewicht)} kg`);
       return `<li><button data-act="goto" data-d="${k}"><span class="d">${esc(fmtDM(k))}</span><span class="s">${esc(parts.filter(Boolean).join(' · ') || 'Notiz')}</span><span class="chev">›</span></button></li>`; }).join('')}</ul>` : `<p class="small">Noch keine Einträge. Fang heute Abend im Tab „Heute“ an.</p>`}
   </div>`;
@@ -568,6 +576,7 @@ function buildPdf(from, to){
     ['Ø Tragedauer an Kompressionstagen', st.avgH == null ? '–' : `${de(st.avgH)} Stunden (Ziel ${de(p.ziel || 10)} Std.)`],
     ['Schmerz (NRS 0–10)', st.avgPain == null ? '–' : `Ø ${de(st.avgPain)}, Maximum ${st.maxPain}`],
     ['Bewegung / Sport', `${st.sport} Einheiten, gesamt ${st.sportMin} Minuten`],
+    ...(st.mldUsed ? [['Manuelle Lymphdrainage', `${st.mld} Termine`]] : []),
     ['Ernährung (Selbsteinschätzung 1–5)', st.ern == null ? '–' : `Ø ${de(st.ern)}`],
     ['Gewicht', weightLine(st.w)]
   ], columnStyles:{0:{fontStyle:'bold', cellWidth:72}}}));
@@ -615,7 +624,8 @@ function buildPdf(from, to){
   // Tagesprotokoll
   doc.addPage(); y = 20;
   y = title('Tagesprotokoll', y);
-  const body = st.list.map(([k,d]) => [
+  const withMld = st.mldUsed;
+  const body = st.list.map(([k,d]) => { const r = [
     parseISO(k).toLocaleDateString('de-DE',{weekday:'short'}) + '\n' + fmtShort(k),
     d.komp === true ? `ja, ${de(d.kompStd)} h${d.vers.length ? '\n' + d.vers.join(', ') : ''}` : d.komp === false ? 'nein' : '–',
     d.schmerz == null && !d.sym.length ? '–' : [d.schmerz != null ? String(d.schmerz) : '', d.reg.join(', '), d.sym.join(', ')].filter(Boolean).join('\n'),
@@ -623,11 +633,11 @@ function buildPdf(from, to){
     [d.ern != null ? `${d.ern}/5` : '', d.ernTags.join(', '), d.wasser != null ? `${de(d.wasser,2)} L getrunken` : ''].filter(Boolean).join('\n') || '–',
     d.gewicht != null ? `${de(d.gewicht)} kg` : '–',
     pdfSafe((d.notiz || '').trim())
-  ]);
-  doc.autoTable(Object.assign({}, tableBase, {startY: y + 1, head: [['Datum','Kompression','Schmerz / Beschwerden','Bewegung','Ernährung','Gewicht','Notiz']],
-    body: body.length ? body : [['–','Keine Einträge im Zeitraum','','','','','']],
+  ]; if (withMld) r.splice(4, 0, d.mld === true ? 'ja' : d.mld === false ? 'nein' : '–'); return r; });
+  doc.autoTable(Object.assign({}, tableBase, {startY: y + 1, head: [withMld ? ['Datum','Kompression','Schmerz / Beschwerden','Bewegung','MLD','Ernährung','Gewicht','Notiz'] : ['Datum','Kompression','Schmerz / Beschwerden','Bewegung','Ernährung','Gewicht','Notiz']],
+    body: body.length ? body : [withMld ? ['–','Keine Einträge im Zeitraum','','','','','',''] : ['–','Keine Einträge im Zeitraum','','','','','']],
     styles: Object.assign({}, tableBase.styles, {fontSize:7.5, cellPadding:1.4, valign:'top'}),
-    columnStyles: {0:{cellWidth:17, fontStyle:'bold'}, 1:{cellWidth:27}, 2:{cellWidth:33}, 3:{cellWidth:25}, 4:{cellWidth:28}, 5:{cellWidth:15}, 6:{cellWidth:'auto'}}}));
+    columnStyles: withMld ? {0:{cellWidth:17, fontStyle:'bold'}, 1:{cellWidth:27}, 2:{cellWidth:33}, 3:{cellWidth:23}, 4:{cellWidth:10}, 5:{cellWidth:26}, 6:{cellWidth:15}, 7:{cellWidth:'auto'}} : {0:{cellWidth:17, fontStyle:'bold'}, 1:{cellWidth:27}, 2:{cellWidth:33}, 3:{cellWidth:25}, 4:{cellWidth:28}, 5:{cellWidth:15}, 6:{cellWidth:'auto'}}}));
   y = doc.lastAutoTable.finalY + 16;
   y = need(y, 30);
   doc.setFontSize(9); doc.setTextColor(...INK); doc.setFont('helvetica','normal');
