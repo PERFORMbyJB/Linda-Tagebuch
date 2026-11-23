@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lipo-Tagebuch">
+<meta name="theme-color" content="#fff7fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1d1016" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Lipödem-Tagebuch</title>
+<style>
+/* VOICE: zart, ruhig, persönlich – ein Tagebuch, kein Klinik-Formular
+   IDEA: ein rosa Notizbuch mit Tagesseiten, das sich abends in 2 Minuten füllt
+   PICTURE: der Ring der Kompressions-Stunden als Tagesmittelpunkt
+   COLOUR and TYPE: Weiß, Rosa als Fläche, Pink als Akzent; SF Rounded
+   LAYOUT: eine Spalte fürs iPhone, Tab-Leiste unten, Karten pro Thema */
+:root{
+  --bg:#fff7fa;--card:#ffffff;--ink:#3a1f2b;--muted:#8c6474;--pink:#e2457c;--pink2:#c72f66;
+  --rosa:#fbd5e2;--rosa2:#fde9f0;--line:#f3d9e3;--ok:#2e9d78;--warn:#b5651d;--shadow:rgba(226,69,124,.18);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#1d1016;--card:#2a1720;--ink:#fbe9f0;--muted:#c9a3b3;--pink:#ff6f9f;--pink2:#ff8db3;
+  --rosa:#4a2433;--rosa2:#361a26;--line:#46262f;--ok:#5fd1a9;--warn:#f0a35e;--shadow:rgba(0,0,0,.4);
+}}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,"Segoe UI",sans-serif;overflow-x:clip;
+  padding:env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+main{max-width:560px;margin:0 auto}
+h1{font-size:26px;line-height:1.1;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.small,.hint{font-size:13px;color:var(--muted)}
+.hint{margin:-6px 0 10px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 2px 4px}
+.top .brand{font-weight:700;color:var(--pink);font-size:15px}
+.top .who{font-size:13px;color:var(--muted)}
+.card{background:var(--card);border-radius:22px;padding:18px;margin:14px 0;box-shadow:0 1px 0 var(--line),0 10px 28px -20px var(--shadow)}
+.lab{display:block;font-size:14px;font-weight:600;margin:14px 0 8px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+/* Datumsleiste */
+.datebar{display:flex;align-items:center;gap:10px;margin-top:6px}
+.datebar .dt{flex:1;text-align:center}
+.datebar .dt b{display:block;font-size:20px}
+.datebar .dt span{font-size:13px;color:var(--muted)}
+.ib{width:44px;height:44px;border-radius:50%;border:0;background:var(--rosa2);font-size:24px;line-height:1;color:var(--pink)}
+.ib:disabled{opacity:.3}
+.linkbtn{border:0;background:none;color:var(--pink);font-weight:600;padding:8px;min-height:44px}
+/* Hero mit Ring */
+.hero{display:grid;grid-template-columns:132px minmax(0,1fr);gap:18px;align-items:center;background:linear-gradient(160deg,var(--rosa) 0%,var(--rosa2) 100%);border-radius:28px;padding:20px;margin:14px 0}
+.ringwrap{position:relative;width:132px;height:132px}
+.ring{width:132px;height:132px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:12}
+.ring .rt{stroke:rgba(255,255,255,.75)}
+.ring .rv{stroke:var(--pink);stroke-linecap:round;transition:stroke-dashoffset .5s ease}
+@media (prefers-reduced-motion:reduce){.ring .rv{transition:none}}
+@media (prefers-color-scheme:dark){.ring .rt{stroke:rgba(255,255,255,.12)}}
+.ringtxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringtxt b{font-size:32px;line-height:1}
+.ringtxt span{font-size:12px;color:var(--muted)}
+.herotxt p{font-size:15px}
+.pill{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.7);font-size:13px;font-weight:600;color:var(--muted)}
+.pill.ok{background:var(--pink);color:#fff}
+@media (prefers-color-scheme:dark){.pill{background:rgba(255,255,255,.1)}}
+/* Bedienelemente */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button,.opt{min-height:46px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-weight:600;padding:8px 10px}
+.seg button.on,.opt.on{background:var(--pink);border-color:var(--pink);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;border-radius:99px;border:1.5px solid var(--line);background:var(--card);padding:6px 14px;font-size:15px}
+.chip[aria-pressed=true]{background:var(--rosa);border-color:var(--pink);color:var(--ink);font-weight:600}
+.scale{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.sc{min-height:46px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:17px}
+.sc.on{background:var(--pink);border-color:var(--pink);color:#fff}
+.scale .cap{grid-column:span 1;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+.five{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.five .opt{font-size:13px;padding:6px 2px}
+.step{display:flex;align-items:center;gap:10px}
+.step button{width:48px;height:48px;border-radius:50%;border:0;background:var(--rosa);color:var(--pink2);font-size:24px;font-weight:700;flex:none}
+.step output{flex:1;text-align:center;font-size:22px;font-weight:700;white-space:nowrap}
+.quick{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.quick .chip{min-height:36px;padding:4px 12px;font-size:14px}
+input[type=text],input[type=number],input[type=date],textarea,input:not([type]){width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--rosa2);border:1.5px solid var(--line);border-radius:14px;padding:12px;min-height:48px}
+input[type=date]{-webkit-appearance:none;appearance:none}
+textarea{min-height:90px;resize:vertical}
+.unitin{position:relative}
+.unitin span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;border-radius:16px;border:0;background:var(--pink);color:#fff;font-weight:700;font-size:17px;margin-top:12px;text-decoration:none}
+.btn.sec{background:var(--rosa);color:var(--pink2)}
+.btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink)}
+.btn.danger{background:none;border:1.5px solid var(--line);color:#c0392b}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.banner{border-radius:18px;padding:14px 16px;margin:12px 0;background:var(--rosa2);border:1.5px dashed var(--pink);font-size:14px}
+.banner b{display:block;margin-bottom:2px}
+.banner .linkbtn{padding:0;min-height:32px}
+/* Verlauf */
+.per{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--rosa2);border-radius:16px;padding:12px}
+.stat b{display:block;font-size:24px;line-height:1.1}
+.stat span{font-size:13px;color:var(--muted)}
+.prog{height:12px;border-radius:99px;background:var(--rosa2);overflow:hidden;margin:10px 0 6px}
+.prog i{display:block;height:100%;background:var(--pink);border-radius:99px}
+.chart{position:relative;height:150px;margin-top:6px}
+.bars{position:absolute;inset:0;display:flex;align-items:flex-end;gap:2px;border-bottom:1.5px solid var(--line)}
+.bars.dense{gap:0}
+.bars i{flex:1;background:var(--pink);border-radius:3px 3px 0 0;min-height:0;opacity:.85}
+.bars i.no{background:var(--muted);opacity:.35;height:4px!important}
+.chart svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.zielline{position:absolute;left:0;right:0;border-top:1.5px dashed var(--pink2);opacity:.6}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
+.daylist{list-style:none;margin:0;padding:0}
+.daylist li{border-top:1px solid var(--line)}
+.daylist button{display:flex;width:100%;text-align:left;border:0;background:none;padding:12px 0;gap:12px;align-items:center;min-height:56px}
+.daylist .d{width:74px;flex:none;font-weight:700;font-size:14px}
+.daylist .s{flex:1;font-size:14px;color:var(--muted)}
+.daylist .chev{color:var(--pink);font-size:20px}
+/* Umfänge */
+.mgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+.mgrid .h{font-size:12px;color:var(--muted);text-align:center;font-weight:600}
+.mgrid label{font-size:15px;font-weight:600}
+.mgrid input{min-height:44px;padding:8px 10px;text-align:center}
+.mgrid .span2{grid-column:span 2}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.pos{color:#c0392b}.neg{color:var(--ok)}
+.scroll{overflow-x:auto}
+.mcard{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding:10px 0}
+.mcard .v{font-size:13px;color:var(--muted)}
+/* Tab-Leiste */
+nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:6px max(8px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-right));z-index:5}
+@supports not (background:color-mix(in srgb,red,blue)){nav{background:var(--card)}}
+nav button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:var(--muted);min-height:52px;justify-content:center}
+nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--pink)}
+/* Dialog & Toast */
+.ov{position:fixed;inset:0;background:rgba(40,10,25,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+.ov .card{width:100%;max-width:480px;margin:0}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:14px;z-index:30;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+
+<nav aria-label="Bereiche">
+  <button data-act="tab" data-tab="heute"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Heute</button>
+  <button data-act="tab" data-tab="verlauf"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Verlauf</button>
+  <button data-act="tab" data-tab="umfaenge"><svg viewBox="0 0 24 24"><path d="M3 8h18v8H3zM7 8v3M11 8v4M15 8v3M19 8v4"/></svg>Umfänge</button>
+  <button data-act="tab" data-tab="export"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Export</button>
+</nav>
+
+<input type="file" id="restoreFile" accept="application/json,.json" class="sr" tabindex="-1">
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+{
+/* ---------- Grundlagen ---------- */
+const KEY = 'lipoTagebuch.v1';
+const VERS = ['Leggings/Hose','Strumpfhose','Caprihose','Oberschenkelstrümpfe','Kniestrümpfe','Armstrümpfe','Bolero/Oberteil'];
+const REG = ['Oberschenkel','Unterschenkel','Knie','Hüfte/Gesäß','Oberarme','Unterarme'];
+const SYM = ['Druckschmerz','Spannungsgefühl','Schweregefühl','Schwellung','Blaue Flecken','Berührungsempfindlich','Müde Beine'];
+const SPORT = ['Krafttraining','Radfahren','Schwimmen','Aquafitness','Walking','Yoga/Pilates','Sonstiges'];
+const ERN = ['Ausgewogen','Proteinreich','Viel Gemüse','Wenig Zucker','Süßes/Snacks','Fast Food','Alkohol'];
+const ERN5 = ['schlecht','mäßig','okay','gut','sehr gut'];
+const MASSE = [['taille','Taille',0],['huefte','Hüfte',0],['oberschenkel','Oberschenkel',1],['knie','Knie',1],['wade','Wade',1],['knoechel','Knöchel',1],['oberarm','Oberarm',1],['unterarm','Unterarm',1]];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s,n) => { const d = parseISO(s); d.setDate(d.getDate()+n); return iso(d); };
+const todayISO = () => iso(new Date());
+const diffDays = (a,b) => Math.round((parseISO(b) - parseISO(a)) / 864e5);
+const fmtLong = s => parseISO(s).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const fmtShort = s => parseISO(s).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+const fmtDM = s => parseISO(s).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'});
+const num = v => { if (v === '' || v == null) return null; const n = parseFloat(String(v).replace(',','.')); return isFinite(n) ? n : null; };
+const de = (n,d=1) => n == null || isNaN(n) ? '–' : Number(n).toLocaleString('de-DE',{maximumFractionDigits:d});
+const pdfSafe = t => String(t ?? '').replace(/[→⇒]/g,'->').replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/[✓✔]/g,'ok').replace(/[\u2018\u2019]/g,"'").replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/gu,'');
+const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+const sum = a => a.reduce((x,y)=>x+y,0);
+const pct = (a,b) => b ? Math.round(a/b*100) + ' %' : '–';
+const range = (from,to) => { const r=[]; if (!from || !to || from > to) return r; let k=from; while (k <= to) { r.push(k); k = addDays(k,1); } return r; };
+const isStandalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+
+const blank = () => ({version:1, profile:{name:'',arzt:'',diagnose:'',start:'',ziel:10,groesse:null}, days:{}, mess:[], lastBackup:null, hideInstall:false});
+const newDay = () => ({komp:null,kompStd:0,vers:[],schmerz:null,reg:[],sym:[],sport:null,sportArt:[],sportMin:0,ern:null,ernTags:[],wasser:null,gewicht:null,notiz:''});
+
+function normalize(o){
+  const b = blank();
+  const r = Object.assign(b, o || {});
+  r.profile = Object.assign(blank().profile, (o && o.profile) || {});
+  r.days = (o && typeof o.days === 'object' && o.days) ? o.days : {};
+  r.mess = Array.isArray(o && o.mess) ? o.mess : [];
+  return r;
+}
+let storageOk = true;
+function load(){ let raw = null; try { raw = localStorage.getItem(KEY); if (raw) return normalize(JSON.parse(raw)); } catch(e) { if (raw) { try { localStorage.setItem(KEY + '.corrupt.' + Date.now(), raw); } catch(_) {} } else storageOk = false; } return blank(); }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); storageOk = true; } catch(e) { storageOk = false; toast('Speichern fehlgeschlagen – bitte Backup erstellen'); } }
+
+let S = load();
+let tab = 'heute', cur = todayISO(), per = 30, messForm = null, pdfBlob = null, pdfName = '';
+
+const getDay = k => { const d = Object.assign(newDay(), S.days[k] || {}); ['vers','reg','sym','sportArt','ernTags'].forEach(f => { if (!Array.isArray(d[f])) d[f] = []; }); return d; };
+const putDay = (k,d) => { d.t = Date.now(); S.days[k] = d; save(); };
+const documented = d => !!d && (d.komp != null || d.schmerz != null || d.sport != null || d.ern != null || d.gewicht != null || d.wasser != null || ((d.notiz||'').trim() !== '') || (d.sym && d.sym.length > 0) || (d.ernTags && d.ernTags.length > 0) || (d.sportArt && d.sportArt.length > 0) || (d.vers && d.vers.length > 0) || (d.reg && d.reg.length > 0));
+const docKeys = () => Object.keys(S.days).filter(k => documented(S.days[k])).sort();
+const firstDate = () => { const c = [...docKeys(), ...S.mess.map(m => m.date)].sort(); return c[0] || null; };
+const startDate = () => S.profile.start || firstDate() || todayISO();
+
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(()=>el.classList.remove('show'), 2200); }
+
+function ask(title, text, ok='OK', danger=false){
+  return new Promise(res => {
+    const ov = document.createElement('div'); ov.className = 'ov';
+    ov.innerHTML = `<div class="card" role="dialog" aria-modal="true" aria-labelledby="dlgT"><h2 id="dlgT">${esc(title)}</h2><p class="small">${esc(text)}</p>
+      <button class="btn ${danger?'danger':''}" data-r="1">${esc(ok)}</button><button class="btn ghost" data-r="0">Abbrechen</button></div>`;
+    ov.addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (b || e.target === ov) { ov.remove(); res(!!(b && b.dataset.r === '1')); } });
+    document.body.appendChild(ov); ov.querySelector('[data-r="1"]').focus();
+  });
+}
+
+/* ---------- Bausteine ---------- */
+const seg = (k,val,a,b) => `<div class="seg">${[a,b].map(([l,v]) => `<button data-act="set" data-k="${k}" data-v="${esc(JSON.stringify(v))}" class="${val===v?'on':''}" aria-pressed="${val===v}">${l}</button>`).join('')}</div>`;
+const chips = (k,list,sel) => `<div class="chips">${list.map(x => `<button class="chip" data-act="toggle" data-k="${k}" data-v="${esc(JSON.stringify(x))}" aria-pressed="${sel.includes(x)}">${esc(x)}</button>`).join('')}</div>`;
+const stepper = (k,v,unit,s,min,max,label) => `<div class="step"><button data-act="step" data-k="${k}" data-s="${-s}" data-min="${min}" data-max="${max}" aria-label="${label} verringern">−</button><output>${v==null?'–':de(v,2)} ${unit}</output><button data-act="step" data-k="${k}" data-s="${s}" data-min="${min}" data-max="${max}" aria-label="${label} erhöhen">+</button></div>`;
+
+function progressInfo(){
+  const st = startDate(), n = Math.max(1, diffDays(st, todayISO()) + 1);
+  return {n, rest: Math.max(0, 183 - n), p: Math.min(100, n/183*100), docN: docKeys().length};
+}
+
+function banners(){
+  let h = '';
+  if (!storageOk) h += `<div class="banner"><b>Speicher nicht verfügbar</b>Dieser Browser erlaubt kein lokales Speichern (z. B. privater Modus). Einträge gehen beim Schließen verloren.</div>`;
+  if (!isStandalone() && !S.hideInstall) h += `<div class="banner"><b>Tipp: Als App installieren</b>In Safari unten auf „Teilen“ tippen → „Zum Home-Bildschirm“. Danach immer über das Symbol öffnen – dort bleiben die Daten.<br><button class="linkbtn" data-act="hideInstall">Ausblenden</button></div>`;
+  const n = docKeys().length;
+  if (n >= 3) {
+    const lb = S.lastBackup ? diffDays(S.lastBackup.slice(0,10), todayISO()) : null;
+    if (lb == null || lb >= 7) h += `<div class="banner"><b>${lb == null ? 'Noch kein Backup' : `Letztes Backup vor ${lb} Tagen`}</b>Die Daten liegen nur auf diesem iPhone. Einmal pro Woche sichern.<br><button class="linkbtn" data-act="backup">Jetzt sichern</button></div>`;
+  }
+  return h;
+}
+
+/* ---------- Ansicht: Heute ---------- */
+function vHeute(){
+  const d = getDay(cur), ziel = S.profile.ziel || 10, isT = cur === todayISO();
+  const C = 2*Math.PI*52, pctR = Math.min(1, (d.kompStd||0)/ziel);
+  const pi = progressInfo();
+  const lastW = docKeys().filter(k => k < cur && S.days[k].gewicht != null).pop();
+  return `
+  ${banners()}
+  <div class="datebar">
+    <button class="ib" data-act="day" data-n="-1" aria-label="Vorheriger Tag">‹</button>
+    <div class="dt"><b>${isT ? 'Heute' : esc(parseISO(cur).toLocaleDateString('de-DE',{weekday:'long'}))}</b><span>${esc(fmtLong(cur))}</span></div>
+    <button class="ib" data-act="day" data-n="1" ${isT?'disabled':''} aria-label="Nächster Tag">›</button>
+  </div>
+  ${isT ? '' : `<div style="text-align:center"><button class="linkbtn" data-act="today">Zurück zu heute</button></div>`}
+
+  <section class="hero" aria-label="Tagesübersicht">
+    <div class="ringwrap">
+      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="rt" cx="60" cy="60" r="52"/><circle class="rv" cx="60" cy="60" r="52" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-pctR)}"/></svg>
+      <div class="ringtxt"><b>${de(d.kompStd||0)}</b><span>von ${de(ziel)} Std.</span></div>
+    </div>
+    <div class="herotxt">
+      <h1>Kompression</h1>
+      <p>${d.komp === false ? 'Heute nicht getragen' : d.komp ? 'Getragen' : 'Noch nicht erfasst'}</p>
+      <p class="small">Doku-Tag ${pi.n} · ${pi.docN} Tage erfasst</p>
+      <span class="pill ${documented(d)?'ok':''}" id="pill">${documented(d) ? 'Dokumentiert' : 'Noch offen'}</span>
+    </div>
+  </section>
+
+  <div class="card"><h2>Kompression</h2>
+    ${seg('komp', d.komp, ['Getragen', true], ['Nicht getragen', false])}
+    ${d.komp ? `<span class="lab">Tragedauer</span>${stepper('kompStd', d.kompStd, 'Std.', 0.5, 0, 24, 'Tragedauer')}
+      <div class="quick">${[6,8,10,12,14].map(h => `<button class="chip" data-act="set" data-k="kompStd" data-v="${h}" aria-pressed="${d.kompStd===h}">${h} Std.</button>`).join('')}</div>
+      <span class="lab">Versorgung</span>${chips('vers', VERS, d.vers)}` : ''}
+  </div>
+
+  <div class="card"><h2>Schmerzen</h2>
+    <p class="hint">0 = keine, 10 = stärkste vorstellbare</p>
+    <div class="scale">${Array.from({length:11}, (_,i) => `<button class="sc ${d.schmerz===i?'on':''}" data-act="set" data-k="schmerz" data-v="${i}" aria-pressed="${d.schmerz===i}">${i}</button>`).join('')}<span class="cap">stark</span></div>
+    ${d.schmerz > 0 ? `<span class="lab">Wo?</span>${chips('reg', REG, d.reg)}` : ''}
+    <span class="lab">Beschwerden</span>${chips('sym', SYM, d.sym)}
+  </div>
+
+  <div class="card"><h2>Bewegung</h2>
+    ${seg('sport', d.sport, ['Sport gemacht', true], ['Kein Sport', false])}
+    ${d.sport ? `<span class="lab">Was?</span>${chips('sportArt', SPORT, d.sportArt)}<span class="lab">Dauer</span>${stepper('sportMin', d.sportMin, 'Min.', 5, 0, 600, 'Dauer')}` : ''}
+  </div>
+
+  <div class="card"><h2>Ernährung</h2>
+    <p class="hint">Eigene Einschätzung des Tages</p>
+    <div class="five">${ERN5.map((l,i) => `<button class="opt ${d.ern===i+1?'on':''}" data-act="set" data-k="ern" data-v="${i+1}" aria-pressed="${d.ern===i+1}">${l}</button>`).join('')}</div>
+    <span class="lab">Was trifft zu?</span>${chips('ernTags', ERN, d.ernTags)}
+    <span class="lab">Getrunken</span>${stepper('wasser', d.wasser, 'Liter', 0.25, 0, 8, 'Trinkmenge')}
+  </div>
+
+  <div class="card"><h2>Gewicht</h2>
+    <p class="hint">${lastW ? `Zuletzt ${de(S.days[lastW].gewicht)} kg am ${fmtShort(lastW)}` : 'Optional – am besten morgens nüchtern'}</p>
+    <div class="unitin"><label class="sr" for="gw">Gewicht in kg</label><input id="gw" type="text" inputmode="decimal" data-in="gewicht" value="${d.gewicht==null?'':esc(de(d.gewicht,2))}" placeholder="z. B. 68,4"><span>kg</span></div>
+  </div>
+
+  <div class="card"><h2>Notiz</h2>
+    <label class="sr" for="nt">Notiz zum Tag</label>
+    <textarea id="nt" data-in="notiz" placeholder="Besonderheiten, Termine, Hitze, Zyklus, Hautprobleme unter der Kompression …">${esc(d.notiz)}</textarea>
+  </div>
+  <p class="small" style="text-align:center">Alles wird automatisch auf diesem Gerät gespeichert.</p>`;
+}
+
+/* ---------- Auswertung ---------- */
+function stats(from, to){
+  const ds = range(from, to);
+  const list = ds.map(k => [k, S.days[k]]).filter(([,d]) => documented(d)).map(([k]) => [k, getDay(k)]);
+  const kd = list.filter(([,d]) => d.komp === true);
+  const pain = list.filter(([,d]) => d.schmerz != null).map(([,d]) => d.schmerz);
+  const sp = list.filter(([,d]) => d.sport === true);
+  const ern = list.filter(([,d]) => d.ern != null).map(([,d]) => d.ern);
+  return {
+    ds, days: ds.length, doc: list.length, list,
+    komp: kd.length, kompNo: list.filter(([,d]) => d.komp === false).length,
+    avgH: mean(kd.map(([,d]) => d.kompStd || 0)),
+    avgPain: mean(pain), maxPain: pain.length ? Math.max(...pain) : null,
+    sport: sp.length, sportMin: sum(sp.map(([,d]) => d.sportMin || 0)),
+    ern: mean(ern),
+    w: list.filter(([,d]) => d.gewicht != null).map(([k,d]) => [k, d.gewicht])
+  };
+}
+const weightLine = w => w.length === 0 ? '–' : w.length === 1 ? `${de(w[0][1])} kg (${fmtShort(w[0][0])})` :
+  `von ${de(w[0][1])} kg (${fmtShort(w[0][0])}) auf ${de(w[w.length-1][1])} kg (${fmtShort(w[w.length-1][0])}), Differenz ${(w[w.length-1][1]-w[0][1] > 0 ? '+' : '')}${de(w[w.length-1][1]-w[0][1])} kg`;
+
+function polySegments(vals, maxY){ // vals: array (null erlaubt) → SVG-Polylines
+  const segs = []; let cur = [];
+  vals.forEach((v,i) => { if (v == null) { if (cur.length) segs.push(cur); cur = []; } else cur.push(`${i+0.5},${(maxY - v)}`); });
+  if (cur.length) segs.push(cur);
+  return segs.map(s => s.length === 1 ? `<circle cx="${s[0].split(',')[0]}" cy="${s[0].split(',')[1]}" r="0.35" fill="currentColor"/>` :
+    `<polyline points="${s.join(' ')}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`).join('');
+}
+
+/* ---------- Ansicht: Verlauf ---------- */
+function vVerlauf(){
+  const to = todayISO();
+  const from = per === 'all' ? (firstDate() || to) : addDays(to, -(per - 1));
+  const st = stats(from, to), pi = progressInfo(), ziel = S.profile.ziel || 10;
+  const n = st.ds.length;
+  const bars = st.ds.map(k => { const d = S.days[k]; if (d && d.komp === false) return `<i class="no"></i>`; const h = d && d.komp ? Math.min(24, d.kompStd || 0) : 0; return `<i style="height:${h/24*100}%"></i>`; }).join('');
+  const painVals = st.ds.map(k => S.days[k] && S.days[k].schmerz != null ? S.days[k].schmerz : null);
+  const wv = st.ds.map(k => S.days[k] && S.days[k].gewicht != null ? S.days[k].gewicht : null);
+  const wn = wv.filter(v => v != null), wmin = Math.min(...wn), wmax = Math.max(...wn), wpad = Math.max(0.5, (wmax - wmin) * 0.15);
+  const wScaled = wv.map(v => v == null ? null : ((v - (wmin - wpad)) / ((wmax + wpad) - (wmin - wpad))) * 10);
+  const recent = docKeys().reverse().slice(0, 60);
+  return `
+  <div class="top"><span class="brand">Verlauf</span></div>
+  <div class="card"><h2>Auf dem Weg zu 6 Monaten</h2>
+    <div class="prog"><i style="width:${pi.p}%"></i></div>
+    <p class="small">Tag ${pi.n} seit ${fmtShort(startDate())} · ${pi.rest ? `noch ca. ${pi.rest} Tage` : '6 Monate erreicht'} · ${pi.docN} Tage dokumentiert</p>
+  </div>
+  <div class="per" role="group" aria-label="Zeitraum">${[[7,'7 Tage'],[30,'30 Tage'],[90,'90 Tage'],['all','Alles']].map(([v,l]) => `<button class="opt ${per===v?'on':''}" data-act="per" data-v="${v}">${l}</button>`).join('')}</div>
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><b>${st.doc}/${st.days}</b><span>Tage dokumentiert</span></div>
+      <div class="stat"><b>${pct(st.komp, st.doc)}</b><span>mit Kompression</span></div>
+      <div class="stat"><b>${de(st.avgH)} h</b><span>Ø Tragedauer</span></div>
+      <div class="stat"><b>${de(st.avgPain)}</b><span>Ø Schmerz (0–10)</span></div>
+      <div class="stat"><b>${st.sport}×</b><span>Sport · ${st.sportMin} Min.</span></div>
+      <div class="stat"><b>${de(st.ern)}</b><span>Ø Ernährung (1–5)</span></div>
+    </div>
+  </div>
+  <div class="card"><h2>Kompression & Schmerz</h2>
+    <div class="chart">
+      <div class="bars ${n > 45 ? 'dense' : ''}">${bars}</div>
+      <div class="zielline" style="bottom:${Math.min(24,ziel)/24*100}%"></div>
+      <svg viewBox="0 0 ${Math.max(1,n)} 10" preserveAspectRatio="none" style="color:var(--ink)" aria-hidden="true">${polySegments(painVals, 10)}</svg>
+    </div>
+    <div class="axis"><span>${n ? fmtShort(st.ds[0]) : ''}</span><span>${n ? fmtShort(st.ds[n-1]) : ''}</span></div>
+    <div class="legend"><span><i style="background:var(--pink)"></i>Kompression (Std., Skala 0–24)</span><span><i style="background:var(--ink)"></i>Schmerz (0–10)</span><span><i style="border-top:2px dashed var(--pink2);height:0;border-radius:0"></i>Ziel ${ziel} Std.</span></div>
+  </div>
+  ${wn.length >= 2 ? `<div class="card"><h2>Gewicht</h2>
+    <div class="chart" style="height:120px;border-bottom:1.5px solid var(--line)"><svg viewBox="0 0 ${n} 10" preserveAspectRatio="none" style="color:var(--pink)" aria-hidden="true">${polySegments(wScaled, 10)}</svg></div>
+    <div class="axis"><span>min. ${de(wmin)} kg</span><span>max. ${de(wmax)} kg</span></div>
+    <p class="small" style="margin-top:6px">${esc(weightLine(st.w))}</p></div>` : ''}
+  <div class="card"><h2>Einträge</h2>
+    ${recent.length ? `<ul class="daylist">${recent.map(k => { const d = getDay(k); const parts = [];
+      parts.push(d.komp ? `${de(d.kompStd)} h Kompr.` : d.komp === false ? 'ohne Kompr.' : '');
+      if (d.schmerz != null) parts.push(`Schmerz ${d.schmerz}`);
+      if (d.sport) parts.push(`Sport ${d.sportMin} Min.`);
+      if (d.gewicht != null) parts.push(`${de(d.gewicht)} kg`);
+      return `<li><button data-act="goto" data-d="${k}"><span class="d">${esc(fmtDM(k))}</span><span class="s">${esc(parts.filter(Boolean).join(' · ') || 'Notiz')}</span><span class="chev">›</span></button></li>`; }).join('')}</ul>` : `<p class="small">Noch keine Einträge. Fang heute Abend im Tab „Heute“ an.</p>`}
+  </div>`;
+}
+
+/* ---------- Ansicht: Umfänge ---------- */
+const mVal = (m, key) => m && m.values ? num(m.values[key]) : null;
+function vUmfaenge(){
+  const ms = [...S.mess].sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  const first = ms[0], last = ms[ms.length - 1];
+  const rows = [];
+  MASSE.forEach(([k,l,bi]) => { (bi ? [[k+'_l', l+' links'],[k+'_r', l+' rechts']] : [[k, l]]).forEach(([kk,ll]) => rows.push([kk,ll])); });
+  const delta = (a,b) => a == null || b == null ? '' : (() => { const x = b - a; return `<span class="${x > 0 ? 'pos' : x < 0 ? 'neg' : ''}">${x > 0 ? '+' : ''}${de(x)}</span>`; })();
+  const form = messForm ? `<div class="card"><h2>Neue Messung</h2>
+      <label class="lab" for="mdate">Datum</label><input type="date" id="mdate" value="${esc(messForm.date)}" max="${todayISO()}">
+      <span class="lab">Umfänge in cm</span>
+      <div class="mgrid"><span></span><span class="h">links</span><span class="h">rechts</span>
+      ${MASSE.map(([k,l,bi]) => bi
+        ? `<label for="m_${k}_l">${l}</label><input id="m_${k}_l" data-m="${k}_l" inputmode="decimal" value="${esc(messForm.values[k+'_l']??'')}" aria-label="${l} links"><input id="m_${k}_r" data-m="${k}_r" inputmode="decimal" value="${esc(messForm.values[k+'_r']??'')}" aria-label="${l} rechts">`
+        : `<label for="m_${k}">${l}</label><input id="m_${k}" data-m="${k}" inputmode="decimal" class="span2" value="${esc(messForm.values[k]??'')}">`).join('')}
+      </div>
+      <label class="lab" for="mnote">Notiz</label><input id="mnote" type="text" value="${esc(messForm.note||'')}" placeholder="z. B. morgens, Maßband von Praxis">
+      <button class="btn" data-act="savemess">Messung speichern</button><button class="btn ghost" data-act="cancelmess">Abbrechen</button></div>` : '';
+  return `
+  <div class="top"><span class="brand">Umfänge</span></div>
+  ${form || `<button class="btn" data-act="newmess">Neue Messung eintragen</button>`}
+  <div class="card"><h2>So misst du vergleichbar</h2>
+    <p class="small">Immer gleiche Tageszeit (am besten morgens), ohne Kompression, im Stehen, Maßband locker anliegend. Messstellen einmal festlegen, z. B. Oberschenkel an der dicksten Stelle oder fester Abstand über der Kniescheibe – und diesen Abstand in der Notiz festhalten. Ideal: zu Beginn, dann etwa alle 4 Wochen.</p>
+  </div>
+  ${ms.length >= 1 ? `<div class="card"><h2>${ms.length >= 2 ? 'Veränderung' : 'Ausgangswerte'}</h2>
+    <div class="scroll"><table><thead><tr><th>Messstelle</th><th>${fmtShort(first.date)}</th>${ms.length >= 2 ? `<th>${fmtShort(last.date)}</th><th>Δ cm</th>` : ''}</tr></thead>
+    <tbody>${rows.filter(([k]) => ms.some(m => mVal(m,k) != null)).map(([k,l]) => `<tr><td>${l}</td><td>${de(mVal(first,k))}</td>${ms.length >= 2 ? `<td>${de(mVal(last,k))}</td><td>${delta(mVal(first,k), mVal(last,k))}</td>` : ''}</tr>`).join('')}</tbody></table></div></div>` : ''}
+  <div class="card"><h2>Alle Messungen</h2>
+    ${ms.length ? ms.slice().reverse().map(m => { const filled = Object.values(m.values || {}).filter(v => num(v) != null).length;
+      return `<div class="mcard"><div><b>${fmtShort(m.date)}</b><div class="v">${filled} Werte${m.note ? ' · ' + esc(m.note) : ''}</div></div><div><button class="linkbtn" data-act="editmess" data-id="${esc(m.id)}">Bearbeiten</button><button class="linkbtn" style="color:#c0392b" data-act="delmess" data-id="${esc(m.id)}">Löschen</button></div></div>`; }).join('')
+      : `<p class="small">Noch keine Messung. Die erste Messung ist der Ausgangswert für die Dokumentation.</p>`}
+  </div>`;
+}
+
+/* ---------- Ansicht: Export ---------- */
+function vExport(){
+  const p = S.profile;
+  const lb = S.lastBackup ? `${fmtShort(S.lastBackup.slice(0,10))}` : 'noch nie';
+  return `
+  <div class="top"><span class="brand">Export & Einstellungen</span></div>
+  ${banners()}
+  <div class="card"><h2>PDF für Ärztin & Kasse</h2>
+    <p class="small">Zusammenfassung, Verlaufsgrafik, Umfangmessungen und Tagesprotokoll in einem Dokument.</p>
+    <div class="row2" style="margin-top:10px">
+      <div><label class="lab" for="pf">Von</label><input type="date" id="pf" value="${startDate()}"></div>
+      <div><label class="lab" for="pt">Bis</label><input type="date" id="pt" value="${todayISO()}" max="${todayISO()}"></div>
+    </div>
+    <button class="btn" data-act="pdf">PDF erstellen</button>
+    <div id="pdfOut"></div>
+  </div>
+  <div class="card"><h2>Datensicherung</h2>
+    <p class="small">Letztes Backup: <b>${lb}</b>. Die JSON-Datei enthält alle Einträge. In „Dateien“ oder iCloud Drive sichern.</p>
+    <button class="btn sec" data-act="backup">Backup speichern (JSON)</button>
+    <button class="btn ghost" data-act="restore">Backup laden</button>
+  </div>
+  <div class="card"><h2>Angaben fürs PDF</h2>
+    <label class="lab" for="p_name">Name</label><input id="p_name" type="text" data-in="name" data-scope="p" value="${esc(p.name)}" autocomplete="name">
+    <label class="lab" for="p_arzt">Behandelnde Ärztin / Praxis</label><input id="p_arzt" type="text" data-in="arzt" data-scope="p" value="${esc(p.arzt)}">
+    <div class="row2">
+      <div><label class="lab" for="p_diag">Diagnose am</label><input id="p_diag" type="date" data-in="diagnose" data-scope="p" value="${esc(p.diagnose)}"></div>
+      <div><label class="lab" for="p_start">Doku-Beginn</label><input id="p_start" type="date" data-in="start" data-scope="p" value="${esc(p.start)}"></div>
+    </div>
+    <div class="row2">
+      <div><label class="lab" for="p_ziel">Ziel Kompression</label><div class="unitin"><input id="p_ziel" type="text" inputmode="decimal" data-in="ziel" data-scope="p" data-num="1" value="${esc(de(p.ziel))}"><span>Std.</span></div></div>
+      <div><label class="lab" for="p_gr">Körpergröße</label><div class="unitin"><input id="p_gr" type="text" inputmode="numeric" data-in="groesse" data-scope="p" data-num="1" value="${p.groesse==null?'':esc(de(p.groesse))}"><span>cm</span></div></div>
+    </div>
+  </div>
+  <div class="card"><h2>Installation</h2>
+    <p class="small">${isStandalone() ? 'Läuft als App vom Home-Bildschirm.' : 'In Safari: „Teilen“ → „Zum Home-Bildschirm“. Wichtig: Danach nur noch über das App-Symbol öffnen, denn Safari und App haben getrennte Speicher.'}</p>
+  </div>
+  <button class="btn danger" data-act="wipe">Alle Daten auf diesem Gerät löschen</button>
+  <p class="small" style="text-align:center;margin-top:14px">Keine Cloud, kein Konto – die Daten verlassen das iPhone nur über Export.</p>`;
+}
+
+/* ---------- Rendern ---------- */
+function render(){
+  const v = {heute: vHeute, verlauf: vVerlauf, umfaenge: vUmfaenge, export: vExport}[tab];
+  $('#app').innerHTML = v();
+  document.querySelectorAll('nav button').forEach(b => { const on = b.dataset.tab === tab; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
+  if (tab === 'export') loadPdfLib().catch(() => {});
+}
+
+/* ---------- PDF ---------- */
+let libP = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+function loadPdfLib(){ if (window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable) return Promise.resolve(); if (!libP) libP = loadScript('jspdf.umd.min.js').then(() => loadScript('jspdf.plugin.autotable.min.js')).catch(e => { libP = null; throw e; }); return libP; }
+
+function buildPdf(from, to){
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const P = [226,69,124], R = [251,213,226], R2 = [253,240,245], INK = [58,31,43], MU = [140,100,116];
+  const W = 210, M = 14, st = stats(from, to), p = S.profile;
+  const tableBase = {theme:'grid', margin:{left:M, right:M, top:16, bottom:16}, styles:{fontSize:9, cellPadding:1.8, textColor:INK, lineColor:[243,217,227], lineWidth:0.2}, headStyles:{fillColor:P, textColor:255, fontStyle:'bold'}, alternateRowStyles:{fillColor:R2}};
+  const title = (t, y) => { doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(...P); doc.text(t, M, y); doc.setTextColor(...INK); return y + 3; };
+  const need = (y, h) => { if (y + h > 297 - 18) { doc.addPage(); return 20; } return y; };
+
+  doc.setFillColor(...P); doc.rect(0, 0, W, 34, 'F');
+  doc.setTextColor(255); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text('Therapietagebuch Lipödem', M, 15);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+  doc.text('Dokumentation der konservativen Therapie', M, 22);
+  doc.text(`Zeitraum: ${fmtShort(from)} – ${fmtShort(to)}`, M, 28.5);
+
+  doc.autoTable(Object.assign({}, tableBase, {startY: 42, theme:'plain', body: [
+    ['Name', pdfSafe(p.name) || '–'], ['Behandelnde Ärztin / Praxis', pdfSafe(p.arzt) || '–'],
+    ['Diagnose gestellt am', p.diagnose ? fmtShort(p.diagnose) : '–'],
+    ['Beginn der Dokumentation', fmtShort(startDate())], ['Erstellt am', fmtShort(todayISO())]
+  ], styles:{fontSize:10, cellPadding:1.3, textColor:INK}, columnStyles:{0:{fontStyle:'bold', cellWidth:62}}}));
+  let y = doc.lastAutoTable.finalY + 8;
+
+  y = title('Zusammenfassung', y);
+  doc.autoTable(Object.assign({}, tableBase, {startY: y + 1, body: [
+    ['Dokumentierte Tage', `${st.doc} von ${st.days} Tagen (${pct(st.doc, st.days)})`],
+    ['Tage mit Kompression', `${st.komp} Tage (${pct(st.komp, st.doc)} der dokumentierten Tage)` + (st.kompNo ? `, ${st.kompNo} Tage ohne` : '')],
+    ['Ø Tragedauer an Kompressionstagen', st.avgH == null ? '–' : `${de(st.avgH)} Stunden (Ziel ${de(p.ziel || 10)} Std.)`],
+    ['Schmerz (NRS 0–10)', st.avgPain == null ? '–' : `Ø ${de(st.avgPain)}, Maximum ${st.maxPain}`],
+    ['Bewegung / Sport', `${st.sport} Einheiten, gesamt ${st.sportMin} Minuten`],
+    ['Ernährung (Selbsteinschätzung 1–5)', st.ern == null ? '–' : `Ø ${de(st.ern)}`],
+    ['Gewicht', weightLine(st.w)]
+  ], columnStyles:{0:{fontStyle:'bold', cellWidth:72}}}));
+  y = doc.lastAutoTable.finalY + 10;
+
+  // Grafik
+  y = need(y, 78);
+  y = title('Verlauf: Kompressionsdauer und Schmerz', y);
+  const cx = M + 8, cw = W - 2*M - 16, ch = 52, cy = y + 4, n = st.ds.length || 1, bw = cw / n;
+  doc.setDrawColor(243,217,227); doc.setLineWidth(0.2); doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MU);
+  [0,6,12,18,24].forEach(v => { const yy = cy + ch - v/24*ch; doc.line(cx, yy, cx + cw, yy); doc.text(`${v} h`, cx - 1.5, yy + 1, {align:'right'}); });
+  [0,5,10].forEach(v => doc.text(String(v), cx + cw + 1.5, cy + ch - v/10*ch + 1));
+  st.ds.forEach((k,i) => { const d = S.days[k]; if (d && d.komp) { const hh = Math.min(24, d.kompStd || 0)/24*ch; doc.setFillColor(...P); doc.rect(cx + i*bw + bw*0.15, cy + ch - hh, Math.max(0.2, bw*0.7), hh, 'F'); }
+    else if (d && d.komp === false) { doc.setFillColor(200,180,190); doc.rect(cx + i*bw + bw*0.15, cy + ch - 0.8, Math.max(0.2, bw*0.7), 0.8, 'F'); } });
+  const zy = cy + ch - Math.min(24, p.ziel || 10)/24*ch; doc.setDrawColor(...P); doc.setLineDashPattern([1,1], 0); doc.line(cx, zy, cx + cw, zy); doc.setLineDashPattern([], 0);
+  doc.setDrawColor(...INK); doc.setLineWidth(0.5); let prev = null;
+  st.ds.forEach((k,i) => { const d = S.days[k]; if (d && d.schmerz != null) { const pt = [cx + (i+0.5)*bw, cy + ch - d.schmerz/10*ch]; if (prev && prev[2] === i-1) doc.line(prev[0], prev[1], pt[0], pt[1]); else { doc.setFillColor(...INK); doc.circle(pt[0], pt[1], 0.5, 'F'); } prev = [...pt, i]; } else prev = null; });
+  doc.setFontSize(7.5); doc.setTextColor(...MU);
+  doc.text(fmtShort(st.ds[0] || from), cx, cy + ch + 4); doc.text(fmtShort(st.ds[st.ds.length-1] || to), cx + cw, cy + ch + 4, {align:'right'});
+  const ly = cy + ch + 10; doc.setFillColor(...P); doc.rect(cx, ly - 2.5, 3, 3, 'F'); doc.text('Kompression (Std., linke Achse)', cx + 4.5, ly);
+  doc.setDrawColor(...INK); doc.line(cx + 58, ly - 1, cx + 63, ly - 1); doc.text('Schmerz 0–10 (rechte Achse)', cx + 65, ly);
+  doc.setDrawColor(...P); doc.setLineWidth(0.2); doc.setLineDashPattern([1,1], 0); doc.line(cx + 112, ly - 1, cx + 117, ly - 1); doc.setLineDashPattern([], 0); doc.text(`Ziel ${de(p.ziel || 10)} Std.`, cx + 119, ly);
+  y = ly + 10;
+
+  // Umfänge
+  const ms = S.mess.filter(m => m.date <= to).sort((a,b) => a.date < b.date ? -1 : 1);
+  if (ms.length) {
+    const sel = ms.length > 6 ? [ms[0], ...ms.slice(-5)] : ms;
+    const rows = [];
+    MASSE.forEach(([k,l,bi]) => (bi ? [[k+'_l', l+' links'],[k+'_r', l+' rechts']] : [[k,l]]).forEach(([kk,ll]) => {
+      if (!sel.some(m => mVal(m,kk) != null)) return;
+      const a = mVal(sel[0],kk), b = mVal(sel[sel.length-1],kk);
+      rows.push([ll, ...sel.map(m => de(mVal(m,kk))), sel.length > 1 && a != null && b != null ? `${b-a > 0 ? '+' : ''}${de(b-a)}` : '']);
+    }));
+    y = need(y, 30 + rows.length * 6);
+    y = title('Umfangmessungen (cm)', y);
+    doc.autoTable(Object.assign({}, tableBase, {startY: y + 1, head: [['Messstelle', ...sel.map(m => fmtShort(m.date)), 'Differenz']], body: rows,
+      columnStyles: Object.fromEntries([[0,{fontStyle:'bold'}], ...sel.map((_,i) => [i+1,{halign:'right'}]), [sel.length+1,{halign:'right'}]])}));
+    y = doc.lastAutoTable.finalY + 4;
+    const notes = sel.filter(m => m.note).map(m => `${fmtShort(m.date)}: ${pdfSafe(m.note)}`);
+    if (notes.length) { doc.setFontSize(8); doc.setTextColor(...MU); doc.text(doc.splitTextToSize('Hinweise: ' + notes.join(' · '), W - 2*M), M, y + 3); y += 6 + notes.length * 1.5; }
+    y += 6;
+  }
+
+  // Tagesprotokoll
+  doc.addPage(); y = 20;
+  y = title('Tagesprotokoll', y);
+  const body = st.list.map(([k,d]) => [
+    parseISO(k).toLocaleDateString('de-DE',{weekday:'short'}) + '\n' + fmtShort(k),
+    d.komp === true ? `ja, ${de(d.kompStd)} h${d.vers.length ? '\n' + d.vers.join(', ') : ''}` : d.komp === false ? 'nein' : '–',
+    d.schmerz == null && !d.sym.length ? '–' : [d.schmerz != null ? String(d.schmerz) : '', d.reg.join(', '), d.sym.join(', ')].filter(Boolean).join('\n'),
+    d.sport === true ? `${d.sportMin ? d.sportMin + ' Min.' : 'ja'}${d.sportArt.length ? '\n' + d.sportArt.join(', ') : ''}` : d.sport === false ? 'nein' : '–',
+    [d.ern != null ? `${d.ern}/5` : '', d.ernTags.join(', '), d.wasser != null ? `${de(d.wasser,2)} L getrunken` : ''].filter(Boolean).join('\n') || '–',
+    d.gewicht != null ? `${de(d.gewicht)} kg` : '–',
+    pdfSafe((d.notiz || '').trim())
+  ]);
+  doc.autoTable(Object.assign({}, tableBase, {startY: y + 1, head: [['Datum','Kompression','Schmerz / Beschwerden','Bewegung','Ernährung','Gewicht','Notiz']],
+    body: body.length ? body : [['–','Keine Einträge im Zeitraum','','','','','']],
+    styles: Object.assign({}, tableBase.styles, {fontSize:7.5, cellPadding:1.4, valign:'top'}),
+    columnStyles: {0:{cellWidth:17, fontStyle:'bold'}, 1:{cellWidth:27}, 2:{cellWidth:33}, 3:{cellWidth:25}, 4:{cellWidth:28}, 5:{cellWidth:15}, 6:{cellWidth:'auto'}}}));
+  y = doc.lastAutoTable.finalY + 16;
+  y = need(y, 30);
+  doc.setFontSize(9); doc.setTextColor(...INK); doc.setFont('helvetica','normal');
+  doc.text('Ich bestätige, dass die Angaben in diesem Tagebuch von mir selbst und wahrheitsgemäß geführt wurden.', M, y);
+  doc.setDrawColor(...MU); doc.setLineWidth(0.3); doc.line(M, y + 16, M + 80, y + 16); doc.line(W - M - 80, y + 16, W - M, y + 16);
+  doc.setFontSize(8); doc.setTextColor(...MU); doc.text('Ort, Datum', M, y + 20); doc.text('Unterschrift', W - M - 80, y + 20);
+
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(...MU); doc.setFont('helvetica','normal');
+    doc.text(`Therapietagebuch Lipödem${p.name ? ' – ' + pdfSafe(p.name) : ''} · ${fmtShort(from)}–${fmtShort(to)}`, M, 297 - 8);
+    doc.text(`Seite ${i} von ${pages}`, W - M, 297 - 8, {align:'right'}); }
+  return doc.output('blob');
+}
+
+async function shareOrDownload(blob, name){
+  const file = new File([blob], name, {type: blob.type});
+  try { if (navigator.canShare && navigator.canShare({files:[file]})) { await navigator.share({files:[file], title:name}); return true; } }
+  catch(e) { if (e && e.name === 'AbortError') return false; }
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000); return true;
+}
+
+function backupBlob(){
+  const data = Object.assign({}, S, {exportiert: new Date().toISOString(), app: 'Lipödem-Tagebuch'});
+  return new Blob([JSON.stringify(data, null, 1)], {type:'application/json'});
+}
+
+/* ---------- Ereignisse ---------- */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act, k = b.dataset.k;
+  if (a === 'tab') { tab = b.dataset.tab; render(); window.scrollTo(0,0); return; }
+  if (a === 'day') { const nx = addDays(cur, +b.dataset.n); if (nx > todayISO()) return; cur = nx; render(); return; }
+  if (a === 'today') { cur = todayISO(); render(); return; }
+  if (a === 'goto') { cur = b.dataset.d; tab = 'heute'; render(); window.scrollTo(0,0); return; }
+  if (a === 'per') { per = b.dataset.v === 'all' ? 'all' : +b.dataset.v; render(); return; }
+  if (a === 'hideInstall') { S.hideInstall = true; save(); render(); return; }
+  if (a === 'set' || a === 'toggle' || a === 'step') {
+    const d = getDay(cur);
+    if (a === 'set') { const v = JSON.parse(b.dataset.v); d[k] = (d[k] === v && k !== 'kompStd') ? null : v;
+      if (k === 'komp' && d.komp !== true) d.kompStd = 0;
+      if (k === 'sport' && d.sport !== true) { d.sportMin = 0; d.sportArt = []; }
+      if (k === 'schmerz' && !(d.schmerz > 0)) d.reg = []; }
+    if (a === 'toggle') { const v = JSON.parse(b.dataset.v); const arr = d[k]; const i = arr.indexOf(v); if (i >= 0) arr.splice(i,1); else arr.push(v); }
+    if (a === 'step') { if (d[k] == null && +b.dataset.s < 0) return; const s = +b.dataset.s, min = +b.dataset.min, max = +b.dataset.max; d[k] = Math.round(Math.min(max, Math.max(min, (d[k] || 0) + s)) * 100) / 100; }
+    putDay(cur, d); render(); return;
+  }
+  if (a === 'newmess') { messForm = {id:null, date: todayISO(), values:{}, note:''}; render(); window.scrollTo(0,0); return; }
+  if (a === 'editmess') { const m = S.mess.find(x => x.id === b.dataset.id); if (m) { messForm = JSON.parse(JSON.stringify(m)); render(); window.scrollTo(0,0); } return; }
+  if (a === 'cancelmess') { messForm = null; render(); return; }
+  if (a === 'savemess') {
+    const values = {}; document.querySelectorAll('[data-m]').forEach(i => { const v = num(i.value); if (v != null) values[i.dataset.m] = v; });
+    const date = $('#mdate').value || todayISO();
+    if (!Object.keys(values).length) { toast('Bitte mindestens einen Wert eintragen'); return; }
+    const m = {id: messForm.id || ('m' + Date.now()), date, values, note: $('#mnote').value.trim()};
+    S.mess = S.mess.filter(x => x.id !== m.id); S.mess.push(m); save(); messForm = null; render(); toast('Messung gespeichert'); return;
+  }
+  if (a === 'delmess') { if (await ask('Messung löschen?', 'Diese Messung wird dauerhaft entfernt.', 'Löschen', true)) { S.mess = S.mess.filter(x => x.id !== b.dataset.id); save(); render(); } return; }
+  if (a === 'backup') {
+    const name = `Lipoedem-Tagebuch-Backup_${todayISO()}.json`;
+    const ok = await shareOrDownload(backupBlob(), name);
+    if (ok) { S.lastBackup = todayISO(); save(); render(); toast('Backup erstellt'); }
+    return;
+  }
+  if (a === 'restore') { $('#restoreFile').value = ''; $('#restoreFile').click(); return; }
+  if (a === 'pdf') {
+    const from = $('#pf').value, to = $('#pt').value > todayISO() ? todayISO() : $('#pt').value;
+    if (!from || !to || from > to) { toast('Bitte gültigen Zeitraum wählen'); return; }
+    const out = $('#pdfOut'); out.innerHTML = '<p class="small" style="margin-top:10px">PDF wird erstellt …</p>';
+    try { await loadPdfLib(); } catch(err) { out.innerHTML = '<p class="small" style="margin-top:10px">PDF-Modul konnte nicht geladen werden. Einmal mit Internet öffnen und erneut versuchen.</p>'; return; }
+    try {
+      pdfBlob = buildPdf(from, to); pdfName = `Lipoedem-Dokumentation_${from}_bis_${to}.pdf`;
+      const url = URL.createObjectURL(pdfBlob);
+      out.innerHTML = `<p class="small" style="margin-top:10px">Fertig: ${esc(pdfName)}</p><button class="btn sec" data-act="sharepdf">PDF teilen / in Dateien sichern</button>${isStandalone() ? '' : `<a class="btn ghost" href="${url}" target="_blank" rel="noopener">PDF ansehen</a>`}`;
+    } catch(err) { console.error(err); out.innerHTML = `<p class="small" style="margin-top:10px">Fehler beim Erstellen: ${esc(err.message)}</p>`; }
+    return;
+  }
+  if (a === 'sharepdf') { if (pdfBlob) await shareOrDownload(pdfBlob, pdfName); return; }
+  if (a === 'wipe') {
+    if (await ask('Alle Daten löschen?', 'Alle Tageseinträge, Messungen und Angaben werden von diesem Gerät entfernt. Vorher ein Backup speichern!', 'Endgültig löschen', true)) { S = blank(); save(); render(); toast('Daten gelöscht'); }
+    return;
+  }
+});
+
+document.addEventListener('input', e => {
+  if (messForm) { const t = e.target; if (t.dataset && t.dataset.m) { messForm.values[t.dataset.m] = t.value; return; } if (t.id === 'mdate') { messForm.date = t.value; return; } if (t.id === 'mnote') { messForm.note = t.value; return; } }
+  const el = e.target.closest('[data-in]'); if (!el) return;
+  const k = el.dataset.in;
+  if (el.dataset.scope === 'p') { S.profile[k] = el.dataset.num ? num(el.value) : el.value; if (k === 'ziel' && !(S.profile.ziel > 0)) S.profile.ziel = 10; save(); return; }
+  const d = getDay(cur);
+  d[k] = k === 'notiz' ? el.value : num(el.value);
+  putDay(cur, d);
+  const pill = $('#pill'); if (pill) { const ok = documented(d); pill.textContent = ok ? 'Dokumentiert' : 'Noch offen'; pill.classList.toggle('ok', ok); }
+});
+
+$('#restoreFile').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (!o || typeof o.days !== 'object') throw new Error('Keine gültige Backup-Datei');
+    const n = Object.keys(o.days).length, m = Array.isArray(o.mess) ? o.mess.length : 0;
+    if (await ask('Backup laden?', `Die Datei enthält ${n} Tage und ${m} Messungen. Die aktuellen Daten auf diesem Gerät werden ersetzt.`, 'Ersetzen')) {
+      S = normalize(o); delete S.exportiert; delete S.app; save(); render(); toast('Backup geladen');
+    }
+  } catch(err) { toast('Datei konnte nicht gelesen werden'); }
+});
+
+// Neuer Tag, wenn die App über Mitternacht offen bleibt
+let lastToday = todayISO(), hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (todayISO() !== lastToday) { const longAway = Date.now() - hiddenAt > 4 * 3600e3; if (cur === lastToday && longAway) { cur = todayISO(); lastToday = todayISO(); render(); } else if (longAway) { lastToday = todayISO(); render(); } }
+});
+
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+}
+</script>
+</body>
+</html>
